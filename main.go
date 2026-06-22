@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -13,6 +16,19 @@ type HostInfo struct {
 	OS           string `json:"os"`
 	Architecture string `json:"architecture"`
 	Timestamp    string `json:"timestamp"`
+}
+
+type ProcessInfo struct {
+	Name          string `json:"name"`
+	PID           string `json:"pid"`
+	SessionName   string `json:"session_name"`
+	SessionNumber string `json:"session_number"`
+	MemoryUsage   string `json:"memory_usage"`
+}
+
+type TriageReport struct {
+	HostInfo  HostInfo      `json:"host_info"`
+	Processes []ProcessInfo `json:"processes"`
 }
 
 func collectHostInfo() HostInfo {
@@ -29,10 +45,57 @@ func collectHostInfo() HostInfo {
 	}
 }
 
+func collectProcesses() ([]ProcessInfo, error) {
+	cmd := exec.Command("tasklist", "/fo", "csv", "/nh")
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	reader := csv.NewReader(strings.NewReader(string(output)))
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var processes []ProcessInfo
+
+	for _, record := range records {
+		if len(record) < 5 {
+			continue
+		}
+
+		process := ProcessInfo{
+			Name:          record[0],
+			PID:           record[1],
+			SessionName:   record[2],
+			SessionNumber: record[3],
+			MemoryUsage:   record[4],
+		}
+
+		processes = append(processes, process)
+	}
+
+	return processes, nil
+}
+
 func main() {
 	hostInfo := collectHostInfo()
 
-	output, err := json.MarshalIndent(hostInfo, "", "  ")
+	processes, err := collectProcesses()
+	if err != nil {
+		fmt.Println("Error collecting processes:", err)
+		return
+	}
+
+	report := TriageReport{
+		HostInfo:  hostInfo,
+		Processes: processes,
+	}
+
+	output, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		fmt.Println("Error creating JSON:", err)
 		return
