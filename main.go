@@ -81,6 +81,28 @@ func collectProcesses() ([]ProcessInfo, error) {
 	return processes, nil
 }
 
+func saveReport(report TriageReport) (string, error) {
+	err := os.MkdirAll("reports", 0755)
+	if err != nil {
+		return "", err
+	}
+
+	timestamp := time.Now().Format("20060102-150405")
+	filename := fmt.Sprintf("reports/triage-%s-%s.json", report.HostInfo.Hostname, timestamp)
+
+	output, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(filename, output, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return filename, nil
+}
+
 func main() {
 	hostInfo := collectHostInfo()
 
@@ -95,11 +117,11 @@ func main() {
 		Processes: processes,
 	}
 
-	output, err := json.MarshalIndent(report, "", "  ")
+	filename, err := saveReport(report)
 	if err != nil {
-		fmt.Println("Error creating JSON:", err)
+		fmt.Println("Error saving report:", err)
 		return
 	}
 
-	fmt.Println(string(output))
+	fmt.Println("Triage report saved to:", filename)
 }
