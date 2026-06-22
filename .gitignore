@@ -1,0 +1,19 @@
+# Go build artifacts
+/bin/
+/dist/
+*.exe
+*.out
+
+# Test/cache files
+*.test
+coverage.out
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local reports
+reports/
+*.json
