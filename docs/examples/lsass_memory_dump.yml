@@ -1,0 +1,29 @@
+title: LSASS Memory Dump with ProcDump or Comsvcs
+id: 3edb52e7-c39c-4781-885f-9b8609d5d73d
+status: test
+description: Detects common command-line methods for dumping LSASS memory to obtain credential material.
+author: TriageKit
+date: 2026-07-18
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_procdump:
+    Image|endswith:
+      - '\procdump.exe'
+      - '\procdump64.exe'
+    CommandLine|contains: 'lsass'
+  selection_comsvcs:
+    Image|endswith: '\rundll32.exe'
+    CommandLine|contains|all:
+      - 'comsvcs.dll'
+      - 'MiniDump'
+  condition: 1 of selection_*
+falsepositives:
+  - Authorized incident response or diagnostic collection performed under an approved change
+level: critical
+tags:
+  - attack.credential-access
+  - attack.t1003.001

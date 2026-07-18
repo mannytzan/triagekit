@@ -4,6 +4,8 @@ status: test
 description: Detects values written beneath common Windows Run and RunOnce registry keys used for logon persistence.
 author: TriageKit
 date: 2026-07-18
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
 logsource:
   category: registry_set
   product: windows
@@ -20,4 +22,4 @@ falsepositives:
 level: medium
 tags:
   - attack.persistence
-  - attack.t1060
+  - attack.t1547.001

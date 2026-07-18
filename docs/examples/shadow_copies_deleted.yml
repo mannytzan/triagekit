@@ -1,0 +1,25 @@
+title: Windows Shadow Copies Deleted with Vssadmin
+id: 14332106-b3c4-4658-b67f-626a926e32e4
+status: test
+description: Detects vssadmin deleting volume shadow copies, a behavior frequently observed before ransomware encryption.
+author: TriageKit
+date: 2026-07-18
+references:
+  - https://attack.mitre.org/techniques/T1490/
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\vssadmin.exe'
+  delete_shadows:
+    CommandLine|contains|all:
+      - 'delete'
+      - 'shadows'
+  condition: image and delete_shadows
+falsepositives:
+  - Authorized backup cleanup or storage maintenance
+level: critical
+tags:
+  - attack.impact
+  - attack.t1490

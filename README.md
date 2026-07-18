@@ -169,6 +169,8 @@ validation errors.
 For more copy-ready starting points, browse the
 **[everyday Sigma starter rules](docs/examples/README.md)**. The collection
 includes common SOC use cases plus investigation prompts and tuning guidance.
+The [MITRE ATT&CK coverage map](docs/mitre-attack-coverage.md) shows what the
+starter pack detects, required telemetry, and high-value candidates to add next.
 
 If you already know Sigma, add a `.yml` file beneath `rules/`. Repository policy
 requires a UUID, description, author, log source, condition, severity, expected
@@ -326,6 +328,7 @@ query. Successful output uses CrowdStrike Query Language (CQL).
 .github/workflows/      CI validation and conversion
 rules/                  source-controlled Sigma rules
 docs/examples/          everyday starter rules and analyst guidance
+docs/mitre-attack-coverage.md  ATT&CK coverage and detection backlog
 generated/              generated queries (ignored by Git)
 main.go                 CLI and sigma-cli orchestration
 rules.go                rule and ATT&CK policy validation

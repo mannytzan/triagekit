@@ -1,0 +1,25 @@
+title: Mshta Executes Remote Content
+id: 40e18b94-2e37-414f-92f0-ceaeb54bc713
+status: test
+description: Detects mshta.exe receiving an HTTP or HTTPS location, which can proxy execution of remote script content.
+author: TriageKit
+date: 2026-07-18
+references:
+  - https://attack.mitre.org/techniques/T1218/005/
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\mshta.exe'
+  remote_content:
+    CommandLine|contains:
+      - 'http://'
+      - 'https://'
+  condition: image and remote_content
+falsepositives:
+  - Legacy enterprise applications that intentionally launch trusted remote HTA content
+level: high
+tags:
+  - attack.defense-evasion
+  - attack.t1218.005

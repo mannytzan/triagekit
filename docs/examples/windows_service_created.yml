@@ -1,0 +1,24 @@
+title: Windows Service Created with Sc.exe
+id: 71fe33e7-3fb2-4717-b55c-d7fd07eb3ae8
+status: test
+description: Detects command-line creation of a Windows service, which can provide persistence, privilege escalation, or remote execution.
+author: TriageKit
+date: 2026-07-18
+references:
+  - https://attack.mitre.org/techniques/T1543/003/
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\sc.exe'
+  create_command:
+    CommandLine|contains: ' create '
+  condition: image and create_command
+falsepositives:
+  - Software installation, endpoint management, or administrator-created services
+level: medium
+tags:
+  - attack.persistence
+  - attack.privilege-escalation
+  - attack.t1543.003

@@ -16,6 +16,12 @@ authoring examples; see the Unix compatibility note before converting them.
 | [Connection to destination port 4444](network_connection_port_4444.yml) | Port 4444 is often used in labs and by some reverse shells, though the port alone is not an IoC. | Destination IP/domain, process, user, host role, connection frequency, and threat-intelligence context. |
 | [Linux crontab modified](linux_crontab_modified.yml) | Cron can provide recurring execution and persistence. | User, installed schedule, referenced script, file ownership, parent process, and related logins. |
 | [macOS crontab modified](macos_crontab_modified.yml) | Cron remains available on macOS even though launchd is more common. | User, installed schedule, referenced script, file provenance, parent process, and related logins. |
+| [LSASS memory dumped](lsass_memory_dump.yml) | LSASS can expose reusable Windows credential material. | Elevation, complete process tree, dump path/hash, initiating account, and access to LSASS. |
+| [Credential registry hives saved](registry_credential_hive_dump.yml) | SAM, SECURITY, and SYSTEM copies can support offline credential extraction. | Output path, user, parent process, nearby archive activity, and file access. |
+| [Windows service created](windows_service_created.yml) | A new service can establish persistence or execute as SYSTEM. | Service name, binary path, signer, creator, source host, and whether it started. |
+| [Mshta executes remote content](mshta_remote_content.yml) | A signed Windows binary can proxy execution of remote script content. | URL, parent process, user, downloaded content, and subsequent children/network activity. |
+| [Windows event logs cleared](windows_event_logs_cleared.yml) | Clearing logs can remove evidence during an intrusion. | Cleared channel, account, host role, preceding activity, and logging gaps. |
+| [Shadow copies deleted](shadow_copies_deleted.yml) | Recovery inhibition is a high-value warning for ransomware or destructive activity. | Initiating process tree, user, other backup changes, file activity, and affected hosts. |
 
 ## Run an example
 
@@ -78,3 +84,6 @@ do not label a connection malicious solely because of its port number.
 
 For an explanation of every Sigma field and condition, see
 [Write your first Sigma rule](../writing-your-first-rule.md).
+
+For the ATT&CK review, implemented coverage, and telemetry-dependent backlog,
+see [MITRE ATT&CK detection coverage](../mitre-attack-coverage.md).
