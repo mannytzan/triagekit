@@ -1,127 +1,169 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
+	"bytes"
+	"context"
+	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
-	"runtime"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
-type HostInfo struct {
-	Hostname     string `json:"hostname"`
-	OS           string `json:"os"`
-	Architecture string `json:"architecture"`
-	Timestamp    string `json:"timestamp"`
-}
+const version = "0.2.0-dev"
 
-type ProcessInfo struct {
-	Name          string `json:"name"`
-	PID           string `json:"pid"`
-	SessionName   string `json:"session_name"`
-	SessionNumber string `json:"session_number"`
-	MemoryUsage   string `json:"memory_usage"`
-}
+func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
 
-type TriageReport struct {
-	HostInfo  HostInfo      `json:"host_info"`
-	Processes []ProcessInfo `json:"processes"`
-}
-
-func collectHostInfo() HostInfo {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown"
+func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		printUsage(stderr)
+		return 2
 	}
-
-	return HostInfo{
-		Hostname:     hostname,
-		OS:           runtime.GOOS,
-		Architecture: runtime.GOARCH,
-		Timestamp:    time.Now().Format(time.RFC3339),
-	}
-}
-
-func collectProcesses() ([]ProcessInfo, error) {
-	cmd := exec.Command("tasklist", "/fo", "csv", "/nh")
-
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	reader := csv.NewReader(strings.NewReader(string(output)))
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
-	var processes []ProcessInfo
-
-	for _, record := range records {
-		if len(record) < 5 {
-			continue
+	switch args[0] {
+	case "validate":
+		return runValidate(args[1:], stdout, stderr)
+	case "convert":
+		return runConvert(args[1:], stdout, stderr)
+	case "targets":
+		for _, target := range supportedTargets {
+			fmt.Fprintf(stdout, "%s\t%s\t%s\n", target.Name, target.SigmaTarget, target.Pipeline)
 		}
+		return 0
+	case "version", "-version", "--version":
+		fmt.Fprintln(stdout, version)
+		return 0
+	case "help", "-h", "--help":
+		printUsage(stdout)
+		return 0
+	default:
+		fmt.Fprintf(stderr, "unknown command %q\n", args[0])
+		printUsage(stderr)
+		return 2
+	}
+}
 
-		process := ProcessInfo{
-			Name:          record[0],
-			PID:           record[1],
-			SessionName:   record[2],
-			SessionNumber: record[3],
-			MemoryUsage:   record[4],
+func runValidate(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("validate", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	rulesDir := flags.String("rules", "rules", "directory containing Sigma YAML rules")
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	result, err := validateRules(*rulesDir)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	for _, issue := range result.Issues {
+		fmt.Fprintf(stderr, "%s: %s\n", issue.Path, issue.Message)
+	}
+	fmt.Fprintf(stdout, "validated %d rule(s): %d error(s)\n", result.RuleCount, len(result.Issues))
+	if len(result.Issues) > 0 {
+		return 1
+	}
+	return 0
+}
+
+func runConvert(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("convert", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	rulesDir := flags.String("rules", "rules", "directory containing Sigma YAML rules")
+	outputDir := flags.String("output", "generated", "directory for generated queries")
+	targetNames := flags.String("targets", "splunk,elastic,crowdstrike", "comma-separated conversion targets")
+	timeout := flags.Duration("timeout", 30*time.Second, "timeout for each conversion")
+	sigmaBinary := flags.String("sigma-binary", "sigma", "sigma-cli executable")
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+
+	validation, err := validateRules(*rulesDir)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if len(validation.Issues) > 0 {
+		for _, issue := range validation.Issues {
+			fmt.Fprintf(stderr, "%s: %s\n", issue.Path, issue.Message)
 		}
-
-		processes = append(processes, process)
+		fmt.Fprintln(stderr, "conversion stopped: validation failed")
+		return 1
 	}
 
-	return processes, nil
+	targets, err := selectTargets(*targetNames)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 2
+	}
+	converter := SigmaCLIConverter{Binary: *sigmaBinary, Timeout: *timeout}
+	failures := 0
+	for _, rule := range validation.Rules {
+		for _, target := range targets {
+			artifact, err := converter.Convert(context.Background(), rule.Path, target)
+			if err != nil {
+				fmt.Fprintf(stderr, "%s [%s]: %v\n", rule.Path, target.Name, err)
+				failures++
+				continue
+			}
+			path := artifactPath(*outputDir, target, rule)
+			if err := writeArtifact(path, artifact); err != nil {
+				fmt.Fprintf(stderr, "%s: %v\n", path, err)
+				failures++
+				continue
+			}
+			fmt.Fprintln(stdout, path)
+		}
+	}
+	if failures > 0 {
+		fmt.Fprintf(stderr, "conversion completed with %d failure(s)\n", failures)
+		return 1
+	}
+	return 0
 }
 
-func saveReport(report TriageReport) (string, error) {
-	err := os.MkdirAll("reports", 0755)
-	if err != nil {
-		return "", err
-	}
-
-	timestamp := time.Now().Format("20060102-150405")
-	filename := fmt.Sprintf("reports/triage-%s-%s.json", report.HostInfo.Hostname, timestamp)
-
-	output, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	err = os.WriteFile(filename, output, 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return filename, nil
+func printUsage(w io.Writer) {
+	fmt.Fprintln(w, "TriageKit - Go orchestration for Sigma detection-as-code")
+	fmt.Fprintln(w, "\nUsage: triagekit <command> [options]")
+	fmt.Fprintln(w, "\nCommands:\n  validate   validate Sigma rules and ATT&CK metadata\n  convert    convert rules for Splunk, Elastic, and CrowdStrike\n  targets    list supported conversion targets\n  version    print version")
 }
 
-func main() {
-	hostInfo := collectHostInfo()
+type SigmaCLIConverter struct {
+	Binary  string
+	Timeout time.Duration
+}
 
-	processes, err := collectProcesses()
+func (c SigmaCLIConverter) Convert(parent context.Context, rulePath string, target Target) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(parent, c.Timeout)
+	defer cancel()
+	args := []string{"convert", "-t", target.SigmaTarget}
+	if target.Pipeline != "" {
+		args = append(args, "-p", target.Pipeline)
+	}
+	args = append(args, rulePath)
+	cmd := exec.CommandContext(ctx, c.Binary, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return nil, fmt.Errorf("sigma-cli timed out after %s", c.Timeout)
+	}
 	if err != nil {
-		fmt.Println("Error collecting processes:", err)
-		return
+		message := strings.TrimSpace(stderr.String())
+		if message == "" {
+			message = err.Error()
+		}
+		return nil, fmt.Errorf("sigma-cli: %s", message)
 	}
+	return stdout.Bytes(), nil
+}
 
-	report := TriageReport{
-		HostInfo:  hostInfo,
-		Processes: processes,
+func writeArtifact(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return err
 	}
-
-	filename, err := saveReport(report)
-	if err != nil {
-		fmt.Println("Error saving report:", err)
-		return
-	}
-
-	fmt.Println("Triage report saved to:", filename)
+	return os.WriteFile(path, data, 0o640)
 }
