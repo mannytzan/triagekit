@@ -1,0 +1,5 @@
+# Pinned to the same versions used by .github/workflows/detections.yml.
+sigma-cli==3.1.0
+pysigma-backend-splunk==2.1.0
+pysigma-backend-elasticsearch==2.1.0
+pysigma-backend-crowdstrike==3.0.0

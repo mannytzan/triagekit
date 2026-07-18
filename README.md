@@ -7,6 +7,45 @@ TriageKit is a Go-first detection-as-code lab for building, validating, and
 converting portable Sigma detections for Splunk, Elastic, and CrowdStrike
 Falcon Next-Gen SIEM/LogScale.
 
+## Try the included detection
+
+This is the shortest path from a fresh clone to three reviewable SIEM queries.
+It uses the included encoded-PowerShell rule, so you do not have to understand
+Sigma before proving the tool works.
+
+```powershell
+git clone https://github.com/mannytzan/triagekit.git
+cd triagekit
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
+python -m pip install -r requirements.txt
+go run . validate
+go run . convert
+```
+
+For Linux or macOS, activate the environment with
+`source .venv/bin/activate`; the other commands are the same (use `python3` if
+your system names Python that way).
+
+A successful first run prints:
+
+```text
+validated 1 rule(s): 0 error(s)
+generated/splunk/suspicious_encoded_powershell.spl
+generated/elastic/suspicious_encoded_powershell.lucene
+generated/crowdstrike/suspicious_encoded_powershell.cql
+```
+
+Paths use backslashes on Windows. For example, the generated Splunk query is:
+
+```text
+Image IN ("*\\powershell.exe", "*\\pwsh.exe") CommandLine IN ("* -enc *", "* -encodedcommand *")
+```
+
+That output was generated from the rule currently in this repository. TriageKit
+does not connect to a SIEM or create an alert; it produces queries for you to
+review and test against your own telemetry.
+
 ```text
 Sigma rule -> CI validation -> platform query -> SIEM deployment
            -> alert measurement -> tuning -> improved rule
@@ -66,17 +105,14 @@ Validation requires every rule to contain:
 - Python 3.10 or newer
 - Sigma CLI and the Splunk, Elasticsearch, and CrowdStrike pySigma backends
 
-Install the conversion toolchain:
+Install the pinned conversion toolchain:
 
 ```powershell
-python -m pip install `
-  sigma-cli==3.1.0 `
-  pysigma-backend-splunk==2.1.0 `
-  pysigma-backend-elasticsearch==2.1.0 `
-  pysigma-backend-crowdstrike==3.0.0
+python -m pip install -r requirements.txt
 ```
 
-Using a Python virtual environment is recommended.
+The requirements file is kept in sync with CI. Using a Python virtual
+environment prevents these packages from changing your global Python setup.
 
 ## Choose how to use TriageKit
 
@@ -117,13 +153,22 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install the pinned conversion packages shown in the Requirements section.
+Install the pinned conversion packages:
+
+```powershell
+python -m pip install -r requirements.txt
+```
 
 ### 3. Write a Sigma rule
 
-Add a `.yml` file beneath `rules/`. The included
-`suspicious_encoded_powershell.yml` rule demonstrates the expected structure,
-ATT&CK mapping, and false-positive documentation.
+If you are new to Sigma, first run the included rule unchanged. Then follow
+**[Write your first Sigma rule](docs/writing-your-first-rule.md)**, which explains
+the example field by field, shows how to copy it safely, and covers common
+validation errors.
+
+If you already know Sigma, add a `.yml` file beneath `rules/`. Repository policy
+requires a UUID, description, author, log source, condition, severity, expected
+false positives, and at least one MITRE ATT&CK technique tag.
 
 ### 4. Validate the rules
 
@@ -167,6 +212,12 @@ target that caused it:
 
 ```powershell
 go run . convert -timeout 60s
+```
+
+While developing a rule, converting one target gives faster feedback:
+
+```powershell
+go run . convert -targets splunk
 ```
 
 ### 6. Use the generated query
@@ -285,6 +336,22 @@ go test ./...
 go vet ./...
 go run . validate
 ```
+
+## Troubleshooting
+
+- **`go` or `python` is not recognized:** install the versions listed in
+  Requirements, open a new terminal, and confirm with `go version` and
+  `python --version`.
+- **PowerShell blocks `Activate.ps1`:** run
+  `Set-ExecutionPolicy -Scope Process Bypass`, then activate again. This changes
+  policy only for the current terminal.
+- **`sigma` is not found:** activate `.venv` and rerun
+  `python -m pip install -r requirements.txt`.
+- **A generated query uses unfamiliar fields:** Sigma fields are portable names,
+  but your ingestion schema may differ. Adjust the platform field mapping and
+  test the query before using it as an alert.
+- **A new rule does not validate:** use the error message and the
+  [first-rule guide](docs/writing-your-first-rule.md#common-first-rule-problems).
 
 ## Roadmap
 
