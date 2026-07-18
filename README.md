@@ -166,6 +166,10 @@ If you are new to Sigma, first run the included rule unchanged. Then follow
 the example field by field, shows how to copy it safely, and covers common
 validation errors.
 
+For more copy-ready starting points, browse the
+**[everyday Sigma starter rules](docs/examples/README.md)**. The collection
+includes common SOC use cases plus investigation prompts and tuning guidance.
+
 If you already know Sigma, add a `.yml` file beneath `rules/`. Repository policy
 requires a UUID, description, author, log source, condition, severity, expected
 false positives, and at least one MITRE ATT&CK technique tag.
@@ -321,6 +325,7 @@ query. Successful output uses CrowdStrike Query Language (CQL).
 ```text
 .github/workflows/      CI validation and conversion
 rules/                  source-controlled Sigma rules
+docs/examples/          everyday starter rules and analyst guidance
 generated/              generated queries (ignored by Git)
 main.go                 CLI and sigma-cli orchestration
 rules.go                rule and ATT&CK policy validation

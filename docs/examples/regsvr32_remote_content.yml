@@ -1,0 +1,25 @@
+title: Regsvr32 Loads Remote Scriptlet Content
+id: e587446c-fde9-4b8c-8d5c-56ed44843f77
+status: test
+description: Detects regsvr32 using scriptlet arguments with a remote URL, a pattern associated with proxy execution.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\regsvr32.exe'
+  scriptlet:
+    CommandLine|contains: 'scrobj.dll'
+  remote_source:
+    CommandLine|contains:
+      - '/i:http'
+      - '-i:http'
+  condition: image and scriptlet and remote_source
+falsepositives:
+  - Legacy software installation that registers an approved remote scriptlet
+level: high
+tags:
+  - attack.defense-evasion
+  - attack.t1218.010

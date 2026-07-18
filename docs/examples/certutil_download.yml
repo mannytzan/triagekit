@@ -1,0 +1,24 @@
+title: Certutil Downloads Content from a URL
+id: b4c60f3b-0b4d-47df-93e4-25b528f5626c
+status: test
+description: Detects certutil invoked with URL-cache arguments commonly used to download content.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\certutil.exe'
+  download_arguments:
+    CommandLine|contains|all:
+      - '-urlcache'
+      - '-f'
+      - 'http'
+  condition: image and download_arguments
+falsepositives:
+  - Certificate administration or software deployment that retrieves files with certutil
+level: medium
+tags:
+  - attack.command-and-control
+  - attack.t1105

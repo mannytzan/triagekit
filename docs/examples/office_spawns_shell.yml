@@ -1,0 +1,30 @@
+title: Office Application Spawns a Command Shell
+id: 1a78b719-fc8e-4d18-949b-d1783c7b4c92
+status: test
+description: Detects a Microsoft Office application launching a command shell, which can indicate malicious document execution.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  parent_office:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\powerpnt.exe'
+      - '\outlook.exe'
+  child_shell:
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+  condition: parent_office and child_shell
+falsepositives:
+  - Approved Office macros or add-ins that launch administrative scripts
+level: high
+tags:
+  - attack.execution
+  - attack.t1204.002

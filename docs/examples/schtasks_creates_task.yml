@@ -1,0 +1,21 @@
+title: Schtasks Creates a Scheduled Task
+id: 4f72bfb7-b709-4f52-b4db-c6008e867ee9
+status: test
+description: Detects command-line creation of a Windows scheduled task, which may indicate persistence or remote execution.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith: '\schtasks.exe'
+  create_argument:
+    CommandLine|contains: '/create'
+  condition: image and create_argument
+falsepositives:
+  - Software deployment, maintenance, or administrator-created scheduled tasks
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1053.005

@@ -1,0 +1,26 @@
+title: PowerShell Attempts to Disable Microsoft Defender
+id: 9d82b24e-806f-49ff-b46b-186984b820ce
+status: test
+description: Detects PowerShell using Set-MpPreference to disable Microsoft Defender real-time monitoring.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  image:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  defender_command:
+    CommandLine|contains|all:
+      - 'Set-MpPreference'
+      - '-DisableRealtimeMonitoring'
+      - '$true'
+  condition: image and defender_command
+falsepositives:
+  - Approved troubleshooting or endpoint-management activity that temporarily changes Defender settings
+level: high
+tags:
+  - attack.defense-evasion
+  - attack.t1562.001
