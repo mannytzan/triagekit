@@ -1,4 +1,4 @@
-module github.com/mannyt/triagekit
+module github.com/mannytzan/triagekit
 
 go 1.21.6
 

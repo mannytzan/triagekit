@@ -25,6 +25,8 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
       - run: go run . validate
+      - name: Validate documented starter rules
+        run: go run . validate -rules docs/examples
       - run: go run . convert
       - name: Upload generated queries
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
