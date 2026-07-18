@@ -75,15 +75,54 @@ python -m pip install `
 
 Using a Python virtual environment is recommended.
 
-## Usage
+## Choose how to use TriageKit
 
-### 1. Write a Sigma rule
+There are two supported workflows:
+
+| Workflow | Best for | What happens |
+| --- | --- | --- |
+| Local | Writing and testing rules on a workstation | Go validates rules and Sigma CLI writes queries to `generated/` |
+| GitHub | Team review and repeatable CI | A pull request triggers validation, conversion, and an artifact containing all generated queries |
+
+Neither workflow currently connects to a live SIEM. TriageKit produces queries
+that can be reviewed and then copied or imported into the target platform. Live
+query execution, deployment, and alert measurement are planned stages described
+in the roadmap.
+
+## Use locally
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/mannytzan/triagekit.git
+cd triagekit
+```
+
+### 2. Create an isolated Python environment
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Linux or macOS:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install the pinned conversion packages shown in the Requirements section.
+
+### 3. Write a Sigma rule
 
 Add a `.yml` file beneath `rules/`. The included
 `suspicious_encoded_powershell.yml` rule demonstrates the expected structure,
 ATT&CK mapping, and false-positive documentation.
 
-### 2. Validate the rules
+### 4. Validate the rules
 
 ```powershell
 go run . validate
@@ -98,7 +137,7 @@ go run . validate -rules path/to/rules
 Validation exits nonzero when a rule violates repository policy, making the
 same command suitable for local development and CI.
 
-### 3. Generate platform queries
+### 5. Generate platform queries
 
 ```powershell
 go run . convert
@@ -127,14 +166,54 @@ target that caused it:
 go run . convert -timeout 60s
 ```
 
-### 4. Inspect supported targets
+### 6. Use the generated query
+
+Open the relevant file under `generated/`, review the field mappings, and paste
+the query into the corresponding search interface:
+
+- `.spl` in Splunk Search
+- `.lucene` in Kibana or Elastic Security
+- `.cql` in CrowdStrike Falcon Next-Gen SIEM or LogScale
+
+Always test the generated query against representative telemetry before turning
+it into a production alert. Sigma processing pipelines translate common field
+names, but each organization's ingestion and normalization can differ.
+
+### 7. Inspect supported targets
 
 ```powershell
 go run . targets
 go run . help
 ```
 
-## CI workflow
+## Use through GitHub
+
+Users who do not want to configure Go and Python locally can use the repository's
+GitHub Actions workflow:
+
+1. Fork [mannytzan/triagekit](https://github.com/mannytzan/triagekit).
+2. Enable Actions in the fork if GitHub prompts for approval.
+3. Create a branch and add or edit a rule beneath `rules/`.
+4. Open a pull request against the fork's `main` branch.
+5. Open the `detections` workflow run linked from the pull request.
+6. Confirm that validation, tests, and all three conversions passed.
+7. Download the `sigma-queries` artifact from the workflow run.
+8. Review the appropriate `.spl`, `.lucene`, or `.cql` file before using it in a SIEM.
+
+An experienced contributor can use Git locally to submit the change:
+
+```bash
+git checkout -b detection/my-new-rule
+# Add or edit a rule under rules/
+git add rules/
+git commit -m "Add my new Sigma detection"
+git push origin detection/my-new-rule
+```
+
+The same workflow can also be started by editing a rule directly in GitHub's
+web interface and opening a pull request.
+
+### What GitHub Actions does
 
 The GitHub Actions workflow runs on pull requests and pushes to `main`. It:
 
@@ -144,9 +223,36 @@ The GitHub Actions workflow runs on pull requests and pushes to `main`. It:
 4. Converts rules for Splunk, Elastic, and CrowdStrike.
 5. Uploads the generated queries as a workflow artifact.
 
-No live SIEM credentials are required for validation or conversion. Future
-deployment jobs should use protected environments and platform-specific GitHub
-secrets.
+No live SIEM credentials are required or used. The workflow validates and
+converts detection content but does not query or modify Splunk, Elastic, or
+CrowdStrike. Future deployment jobs should use protected GitHub environments,
+manual approval, and platform-specific secrets.
+
+## What happens to a rule
+
+For example, when a contributor adds a process-creation Sigma rule:
+
+```text
+rules/windows/process_creation/example.yml
+                 |
+                 v
+      Go checks metadata and ATT&CK tags
+                 |
+                 v
+       Sigma CLI converts the rule
+         |             |             |
+         v             v             v
+    Splunk SPL    Elastic Lucene  CrowdStrike CQL
+         |             |             |
+         `-------------+-------------'
+                       |
+                       v
+          Review and test in the chosen SIEM
+```
+
+Editing the Sigma source and running the workflow again regenerates every
+platform query. This prevents three manually maintained detection versions from
+drifting apart.
 
 ## CrowdStrike compatibility
 
