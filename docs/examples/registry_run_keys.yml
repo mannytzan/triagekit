@@ -1,0 +1,23 @@
+title: Registry Run or RunOnce Key Modified
+id: 6f438e21-2d8f-4f4b-a197-97ac5d239ca5
+status: test
+description: Detects values written beneath common Windows Run and RunOnce registry keys used for logon persistence.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  run_keys:
+    TargetObject|contains:
+      - '\Software\Microsoft\Windows\CurrentVersion\Run\'
+      - '\Software\Microsoft\Windows\CurrentVersion\RunOnce\'
+      - '\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\'
+      - '\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\'
+  condition: run_keys
+falsepositives:
+  - Legitimate software installation or user applications configured to start at logon
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1060

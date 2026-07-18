@@ -1,0 +1,23 @@
+title: macOS Crontab Modified with Command-Line Utility
+id: c9d4ee68-7f1e-4893-981b-53ddcd338ef3
+status: test
+description: Detects use of crontab arguments that edit or remove scheduled jobs on macOS.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: macos
+detection:
+  image:
+    Image|endswith: '/crontab'
+  modification:
+    CommandLine|contains:
+      - ' -e'
+      - ' -r'
+  condition: image and modification
+falsepositives:
+  - Administrators or management tooling maintaining approved scheduled jobs
+level: low
+tags:
+  - attack.persistence
+  - attack.t1053.003

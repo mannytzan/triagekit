@@ -1,0 +1,23 @@
+title: Linux Crontab Modified with Command-Line Utility
+id: a2b3132f-505a-4dfd-bd87-1112cd4ac6f1
+status: test
+description: Detects use of crontab arguments that edit or remove scheduled jobs on Linux.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  image:
+    Image|endswith: '/crontab'
+  modification:
+    CommandLine|contains:
+      - ' -e'
+      - ' -r'
+  condition: image and modification
+falsepositives:
+  - Administrators or configuration-management tools maintaining approved scheduled jobs
+level: low
+tags:
+  - attack.persistence
+  - attack.t1053.003

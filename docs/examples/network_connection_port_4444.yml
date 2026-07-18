@@ -1,0 +1,19 @@
+title: Network Connection to Destination Port 4444
+id: f9c3b970-3553-4917-ac93-b8d855a62c04
+status: test
+description: Detects a Windows network connection to destination port 4444, which is commonly associated with testing tools and some reverse shells.
+author: TriageKit
+date: 2026-07-18
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  connection:
+    DestinationPort: 4444
+  condition: connection
+falsepositives:
+  - Authorized penetration testing, security labs, or applications legitimately configured to use port 4444
+level: medium
+tags:
+  - attack.command-and-control
+  - attack.t1571
