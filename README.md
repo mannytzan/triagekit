@@ -1,5 +1,8 @@
 # TriageKit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+
 TriageKit is a Go-first detection-as-code lab for building, validating, and
 converting portable Sigma detections for Splunk, Elastic, and CrowdStrike
 Falcon Next-Gen SIEM/LogScale.
@@ -294,3 +297,16 @@ go run . validate
 The goal is a closed detection-engineering feedback loop: detections should not
 only deploy consistently; their operational quality should be measurable and
 improve over time.
+
+## Security and responsible use
+
+Do not commit live SIEM credentials, customer telemetry, exported alerts, or
+proprietary detection content. Keep platform credentials in protected GitHub
+environments or an approved secrets manager if deployment capabilities are
+added in the future.
+
+Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+
+## License
+
+TriageKit is available under the [MIT License](LICENSE).

@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   security-scan:
-    uses: mannytzan/IaC-Security-Scanning-Pipeline/.github/workflows/security-scan.yml@main
+    uses: mannytzan/IaC-Security-Scanning-Pipeline/.github/workflows/security-scan.yml@3600bb55058830679f333823f4be73593ed42505
     with:
       # TriageKit is a Go project, so initialize only the relevant CodeQL extractor.
       codeql_languages: go

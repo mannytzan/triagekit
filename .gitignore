@@ -23,3 +23,25 @@ reports/
 # Generated detection artifacts
 generated/
 .venv/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets*.yml
+secrets*.yaml
+
+# Potentially sensitive operational exports and telemetry
+telemetry/
+exports/
+alerts/
+events/
+*.log
+*.evtx
+*.pcap
+*.pcapng
