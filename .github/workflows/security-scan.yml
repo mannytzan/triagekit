@@ -1,0 +1,22 @@
+name: Organization Security Scan
+
+# Scan changes to the primary branches and rescan weekly for newly disclosed CVEs.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "0 0 * * 1" # Every Monday at 00:00 UTC.
+
+# The reusable workflow cannot elevate the permissions granted by this caller.
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    uses: mannytzan/IaC-Security-Scanning-Pipeline/.github/workflows/security-scan.yml@main
+    with:
+      # TriageKit is a Go project, so initialize only the relevant CodeQL extractor.
+      codeql_languages: go
