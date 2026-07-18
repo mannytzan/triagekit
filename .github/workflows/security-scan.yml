@@ -11,12 +11,13 @@ on:
 
 # The reusable workflow cannot elevate the permissions granted by this caller.
 permissions:
+  actions: read
   contents: read
   security-events: write
 
 jobs:
   security-scan:
-    uses: mannytzan/IaC-Security-Scanning-Pipeline/.github/workflows/security-scan.yml@3600bb55058830679f333823f4be73593ed42505
+    uses: mannytzan/IaC-Security-Scanning-Pipeline/.github/workflows/security-scan.yml@39b5cb5266248d6ad52945b2abe928f8784b219f
     with:
       # TriageKit is a Go project, so initialize only the relevant CodeQL extractor.
       codeql_languages: go
