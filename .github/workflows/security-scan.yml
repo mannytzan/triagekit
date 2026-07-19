@@ -34,12 +34,35 @@ jobs:
           exit-code: "0"
           hide-progress: true
 
+      - name: Generate human-readable Trivy report
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          format: table
+          output: trivy-report.txt
+          exit-code: "0"
+          hide-progress: true
+          skip-setup-trivy: true
+
+      - name: Add Trivy results to job summary
+        if: always() && hashFiles('trivy-report.txt') != ''
+        run: |
+          echo '## Trivy HIGH/CRITICAL findings' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          if [ -s trivy-report.txt ]; then cat trivy-report.txt >> "$GITHUB_STEP_SUMMARY"; else echo 'No HIGH or CRITICAL findings.' >> "$GITHUB_STEP_SUMMARY"; fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Retain Trivy SARIF report
         if: always() && hashFiles('trivy-results.sarif') != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: trivy-sarif
-          path: trivy-results.sarif
+          path: |
+            trivy-results.sarif
+            trivy-report.txt
           retention-days: 30
           if-no-files-found: error
   semgrep:
@@ -61,11 +84,24 @@ jobs:
       - name: Scan source code with Semgrep CE
         run: semgrep scan --config p/security-audit --sarif --output semgrep-results.sarif --metrics off
 
+      - name: Generate human-readable Semgrep report
+        run: semgrep scan --config p/security-audit --output semgrep-report.txt --metrics off
+
+      - name: Add Semgrep results to job summary
+        if: always() && hashFiles('semgrep-report.txt') != ''
+        run: |
+          echo '## Semgrep CE findings' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          if [ -s semgrep-report.txt ]; then cat semgrep-report.txt >> "$GITHUB_STEP_SUMMARY"; else echo 'No findings.' >> "$GITHUB_STEP_SUMMARY"; fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Retain Semgrep SARIF report
         if: always() && hashFiles('semgrep-results.sarif') != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: semgrep-sarif
-          path: semgrep-results.sarif
+          path: |
+            semgrep-results.sarif
+            semgrep-report.txt
           retention-days: 30
           if-no-files-found: error
